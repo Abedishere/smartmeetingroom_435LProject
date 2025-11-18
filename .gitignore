@@ -52,3 +52,9 @@ docs/_templates/
 # Database
 *.db
 *.sqlite3
+
+# Claude Code
+.claude/
+
+# Virtual Environment
+.venv/
