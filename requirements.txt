@@ -1,0 +1,15 @@
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-JWT-Extended==4.6.0
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0
+pytest==7.4.3
+pytest-cov==4.1.0
+requests==2.31.0
+Werkzeug==3.0.1
+bcrypt==4.1.2
+email-validator==2.1.0
+bleach==6.1.0
+sphinx==7.2.6
+sphinx-rtd-theme==2.0.0
+memory-profiler==0.61.0

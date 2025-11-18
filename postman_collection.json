@@ -1,0 +1,423 @@
+{
+  "info": {
+    "name": "Smart Meeting Room Management System",
+    "description": "API collection for Users and Rooms services with authentication and role-based access control",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url_users",
+      "value": "http://localhost:5001",
+      "type": "string"
+    },
+    {
+      "key": "base_url_rooms",
+      "value": "http://localhost:5002",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Users Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_users}}/api/users/health",
+              "host": ["{{base_url_users}}"],
+              "path": ["api", "users", "health"]
+            },
+            "description": "Check if Users Service is running and healthy"
+          },
+          "response": []
+        },
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.environment.set('user_id', pm.response.json().user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Admin User\",\n    \"username\": \"admin\",\n    \"password\": \"Admin123\",\n    \"email\": \"admin@example.com\",\n    \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_users}}/api/users/register",
+              "host": ["{{base_url_users}}"],
+              "path": ["api", "users", "register"]
+            },
+            "description": "Register a new user account. Required fields: name, username, password, email. Optional: role (default: regular_user). Valid roles: admin, regular_user, facility_manager, moderator, auditor, service_account"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('access_token', pm.response.json().access_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"admin\",\n    \"password\": \"Admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_users}}/api/users/login",
+              "host": ["{{base_url_users}}"],
+              "path": ["api", "users", "login"]
+            },
+            "description": "Authenticate user and receive JWT access token. Token expires in 1 hour. Required fields: username, password"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_users}}/api/users/",
+              "host": ["{{base_url_users}}"],
+              "path": ["api", "users", ""]
+            },
+            "description": "Get all users in the system. Requires Admin or Auditor role."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by Username",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_users}}/api/users/admin",
+              "host": ["{{base_url_users}}"],
+              "path": ["api", "users", "admin"]
+            },
+            "description": "Get specific user by username. Admin/Auditor can view any user, regular users can only view their own profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_users}}/api/users/me",
+              "host": ["{{base_url_users}}"],
+              "path": ["api", "users", "me"]
+            },
+            "description": "Get current authenticated user's profile information"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Name\",\n    \"email\": \"updated@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_users}}/api/users/1",
+              "host": ["{{base_url_users}}"],
+              "path": ["api", "users", "1"]
+            },
+            "description": "Update user information. Admin can update any user, regular users can only update their own profile. Only admin can change roles. Optional fields: name, email, password, role (admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_users}}/api/users/2",
+              "host": ["{{base_url_users}}"],
+              "path": ["api", "users", "2"]
+            },
+            "description": "Delete a user account. Requires Admin role."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rooms Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_rooms}}/api/rooms/health",
+              "host": ["{{base_url_rooms}}"],
+              "path": ["api", "rooms", "health"]
+            },
+            "description": "Check if Rooms Service is running and healthy"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Room (Admin/FM)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.environment.set('room_id', pm.response.json().room.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Conference Room A\",\n    \"capacity\": 10,\n    \"equipment\": [\"Projector\", \"Whiteboard\", \"Video Conference\"],\n    \"location\": \"Building 1, Floor 2, Room 201\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_rooms}}/api/rooms/",
+              "host": ["{{base_url_rooms}}"],
+              "path": ["api", "rooms", ""]
+            },
+            "description": "Create a new meeting room. Requires Admin or Facility Manager role. Required fields: name (2-100 chars), capacity (1-1000), location. Optional: equipment (list of equipment items)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Rooms",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_rooms}}/api/rooms/",
+              "host": ["{{base_url_rooms}}"],
+              "path": ["api", "rooms", ""]
+            },
+            "description": "Get all rooms in the system. Requires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Available Rooms",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_rooms}}/api/rooms/search?capacity=10&location=Building 1&equipment=Projector,Whiteboard",
+              "host": ["{{base_url_rooms}}"],
+              "path": ["api", "rooms", "search"],
+              "query": [
+                {
+                  "key": "capacity",
+                  "value": "10",
+                  "description": "Minimum capacity required"
+                },
+                {
+                  "key": "location",
+                  "value": "Building 1",
+                  "description": "Location filter (partial match)"
+                },
+                {
+                  "key": "equipment",
+                  "value": "Projector,Whiteboard",
+                  "description": "Required equipment (comma-separated)"
+                }
+              ]
+            },
+            "description": "Search for available rooms based on criteria. All query parameters are optional. Only returns rooms with status='available'."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Room by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_rooms}}/api/rooms/1",
+              "host": ["{{base_url_rooms}}"],
+              "path": ["api", "rooms", "1"]
+            },
+            "description": "Get specific room details by ID. Requires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Room (Admin/FM)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Conference Room A\",\n    \"capacity\": 15,\n    \"equipment\": [\"Projector\", \"Whiteboard\", \"Video Conference\", \"Smart TV\"],\n    \"location\": \"Building 1, Floor 2, Room 201\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_rooms}}/api/rooms/1",
+              "host": ["{{base_url_rooms}}"],
+              "path": ["api", "rooms", "1"]
+            },
+            "description": "Update room information. Requires Admin or Facility Manager role. All fields are optional: name, capacity, equipment, location, status"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Room Status (Admin/FM)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"out_of_service\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_rooms}}/api/rooms/1/status",
+              "host": ["{{base_url_rooms}}"],
+              "path": ["api", "rooms", "1", "status"]
+            },
+            "description": "Update room status. Requires Admin or Facility Manager role. Valid statuses: available, booked, out_of_service"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Room (Admin/FM)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_rooms}}/api/rooms/1",
+              "host": ["{{base_url_rooms}}"],
+              "path": ["api", "rooms", "1"]
+            },
+            "description": "Delete a room. Requires Admin or Facility Manager role."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

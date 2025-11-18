@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: meetingroom_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: meetingroom
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - meetingroom_network
+
+  users_service:
+    build:
+      context: .
+      dockerfile: users_service/Dockerfile
+    container_name: users_service
+    environment:
+      DATABASE_URL: postgresql://admin:admin123@db:5432/meetingroom
+      JWT_SECRET_KEY: your-secret-key-change-in-production
+    ports:
+      - "5001:5001"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - meetingroom_network
+    restart: unless-stopped
+
+  rooms_service:
+    build:
+      context: .
+      dockerfile: rooms_service/Dockerfile
+    container_name: rooms_service
+    environment:
+      DATABASE_URL: postgresql://admin:admin123@db:5432/meetingroom
+      JWT_SECRET_KEY: your-secret-key-change-in-production
+      USERS_SERVICE_URL: http://users_service:5001
+    ports:
+      - "5002:5002"
+    depends_on:
+      db:
+        condition: service_healthy
+      users_service:
+        condition: service_started
+    networks:
+      - meetingroom_network
+    restart: unless-stopped
+
+networks:
+  meetingroom_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
