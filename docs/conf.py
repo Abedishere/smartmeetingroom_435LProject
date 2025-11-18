@@ -6,8 +6,8 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 project = 'Smart Meeting Room Management System'
-copyright = '2025, Your Name'
-author = 'Your Name'
+copyright = '2025, Abdel Rahman El Kouche'
+author = 'Abdel Rahman El Kouche'
 release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
