@@ -6,6 +6,7 @@ This module defines the REST API endpoints for user management.
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from users_service.app import limiter
 from users_service.application.services import UserService
 from users_service.application.validators import ValidationError
 from users_service.application.auth import role_required, get_current_user
@@ -26,6 +27,7 @@ def health_check():
 
 
 @users_bp.route('/register', methods=['POST'])
+@limiter.limit("10 per hour")
 def register():
     """
     Register a new user.
@@ -82,6 +84,7 @@ def register():
 
 
 @users_bp.route('/login', methods=['POST'])
+@limiter.limit("20 per hour")
 def login():
     """
     Authenticate a user and return JWT token.

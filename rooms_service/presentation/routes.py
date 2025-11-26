@@ -6,6 +6,7 @@ This module defines the REST API endpoints for room management.
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
+from rooms_service.app import limiter
 from rooms_service.application.services import RoomService
 from rooms_service.application.validators import ValidationError
 from rooms_service.application.auth import role_required
@@ -25,6 +26,7 @@ def health_check():
 
 
 @rooms_bp.route('/', methods=['POST'])
+@limiter.limit("30 per hour")
 @jwt_required()
 @role_required('admin', 'facility_manager')
 def create_room():

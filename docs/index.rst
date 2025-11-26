@@ -11,15 +11,19 @@ access control.
 
    users_service
    rooms_service
+   bookings_service
+   reviews_service
    api_reference
 
 Overview
 --------
 
-The Smart Meeting Room Management System consists of two main microservices:
+The Smart Meeting Room Management System consists of four main microservices:
 
 1. **Users Service** - Handles user authentication, authorization, and profile management
 2. **Rooms Service** - Manages meeting room inventory, availability, and search
+3. **Bookings Service** - Manages room reservations with conflict detection and availability checking
+4. **Reviews Service** - Handles room reviews with ratings, comments, and moderation
 
 Features
 --------
@@ -67,6 +71,8 @@ Quick Start
 
    - Users Service: http://localhost:5001
    - Rooms Service: http://localhost:5002
+   - Bookings Service: http://localhost:5003
+   - Reviews Service: http://localhost:5004
 
 4. Use the Postman collection to test API endpoints
 

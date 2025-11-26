@@ -19,6 +19,16 @@
       "key": "access_token",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "base_url_bookings",
+      "value": "http://localhost:5003",
+      "type": "string"
+    },
+    {
+      "key": "base_url_reviews",
+      "value": "http://localhost:5004",
+      "type": "string"
     }
   ],
   "item": [
@@ -414,6 +424,376 @@
               "path": ["api", "rooms", "1"]
             },
             "description": "Delete a room. Requires Admin or Facility Manager role."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bookings Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_bookings}}/health",
+              "host": ["{{base_url_bookings}}"],
+              "path": ["health"]
+            },
+            "description": "Check if Bookings Service is running and healthy"
+          },
+          "response": []
+        },
+        {
+          "name": "List All Bookings (Admin/FM/Auditor)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_bookings}}/bookings",
+              "host": ["{{base_url_bookings}}"],
+              "path": ["bookings"]
+            },
+            "description": "Get all bookings in the system. Requires Admin, Facility Manager, or Auditor role. Returns booking details with user and room information."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Booking by ID (Admin/FM/Auditor)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_bookings}}/bookings/1",
+              "host": ["{{base_url_bookings}}"],
+              "path": ["bookings", "1"]
+            },
+            "description": "Get specific booking by ID. Requires Admin, Facility Manager, or Auditor role."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Booking History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_bookings}}/bookings/user/admin",
+              "host": ["{{base_url_bookings}}"],
+              "path": ["bookings", "user", "admin"]
+            },
+            "description": "Get booking history for a specific user. Users can view their own bookings. Admin/FM/Auditor can view any user's bookings."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.environment.set('booking_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": 1,\n    \"room_id\": 1,\n    \"start_time\": \"2025-12-01T10:00:00\",\n    \"end_time\": \"2025-12-01T12:00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_bookings}}/bookings",
+              "host": ["{{base_url_bookings}}"],
+              "path": ["bookings"]
+            },
+            "description": "Create a new booking. Required fields: room_id, start_time, end_time, and either user_id or username. Checks for time conflicts. Requires regular_user, facility_manager, admin, or service_account role."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Booking",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"start_time\": \"2025-12-01T14:00:00\",\n    \"end_time\": \"2025-12-01T16:00:00\",\n    \"room_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url_bookings}}/bookings/1",
+              "host": ["{{base_url_bookings}}"],
+              "path": ["bookings", "1"]
+            },
+            "description": "Update booking time or room. All fields optional. Owner, Admin, or Facility Manager can update. Checks for conflicts with new time/room."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_bookings}}/bookings/1",
+              "host": ["{{base_url_bookings}}"],
+              "path": ["bookings", "1"]
+            },
+            "description": "Cancel a booking by setting status to 'cancelled'. Owner, Admin, or Facility Manager can cancel. Returns 204 No Content on success."
+          },
+          "response": []
+        },
+        {
+          "name": "Check Room Availability",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_bookings}}/bookings/check-availability?room_id=1&start_time=2025-12-01T10:00:00&end_time=2025-12-01T12:00:00",
+              "host": ["{{base_url_bookings}}"],
+              "path": ["bookings", "check-availability"],
+              "query": [
+                {
+                  "key": "room_id",
+                  "value": "1",
+                  "description": "Room identifier (required)"
+                },
+                {
+                  "key": "start_time",
+                  "value": "2025-12-01T10:00:00",
+                  "description": "Proposed start time (required)"
+                },
+                {
+                  "key": "end_time",
+                  "value": "2025-12-01T12:00:00",
+                  "description": "Proposed end time (required)"
+                }
+              ]
+            },
+            "description": "Check if a room is available for a given time window. Returns {available: true/false}. end_time must be after start_time."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reviews Service",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url_reviews}}/health",
+              "host": ["{{base_url_reviews}}"],
+              "path": ["health"]
+            },
+            "description": "Check if Reviews Service is running and healthy"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.environment.set('review_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"room_id\": 1,\n    \"rating\": 5,\n    \"comment\": \"Excellent conference room with great equipment!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_reviews}}/reviews",
+              "host": ["{{base_url_reviews}}"],
+              "path": ["reviews"]
+            },
+            "description": "Create a review for a room. Required fields: room_id, rating (1-5), comment (must not be empty). Comment is sanitized to remove unsafe HTML. Requires regular_user, facility_manager, or admin role."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Review",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"rating\": 4,\n    \"comment\": \"Updated review: Very good room but could use better lighting.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url_reviews}}/reviews/1",
+              "host": ["{{base_url_reviews}}"],
+              "path": ["reviews", "1"]
+            },
+            "description": "Update an existing review. Required fields: rating (1-5), comment. Only review owner or admin can update. Comment is sanitized."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_reviews}}/reviews/1",
+              "host": ["{{base_url_reviews}}"],
+              "path": ["reviews", "1"]
+            },
+            "description": "Delete a review. Owner, Moderator, or Admin can delete. Returns 204 No Content on success."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reviews for Room",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_reviews}}/reviews/room/1?min_rating=3&flagged_only=false",
+              "host": ["{{base_url_reviews}}"],
+              "path": ["reviews", "room", "1"],
+              "query": [
+                {
+                  "key": "min_rating",
+                  "value": "3",
+                  "description": "Filter by minimum rating (1-5, optional)"
+                },
+                {
+                  "key": "flagged_only",
+                  "value": "false",
+                  "description": "Show only flagged reviews (optional, default: false)"
+                }
+              ]
+            },
+            "description": "Get all reviews for a specific room. Optional filters: min_rating (1-5) and flagged_only (boolean). Returns list of reviews with user information."
+          },
+          "response": []
+        },
+        {
+          "name": "Flag Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_reviews}}/reviews/1/flag",
+              "host": ["{{base_url_reviews}}"],
+              "path": ["reviews", "1", "flag"]
+            },
+            "description": "Flag a review as inappropriate. Any regular_user, moderator, or admin can flag. Sets flagged=true on the review."
+          },
+          "response": []
+        },
+        {
+          "name": "Unflag Review (Moderator/Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url_reviews}}/reviews/1/unflag",
+              "host": ["{{base_url_reviews}}"],
+              "path": ["reviews", "1", "unflag"]
+            },
+            "description": "Remove a flag from a review. Requires Moderator or Admin role. Sets flagged=false on the review."
           },
           "response": []
         }

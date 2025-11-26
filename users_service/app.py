@@ -5,13 +5,84 @@ This module initializes and configures the Flask application for the Users Servi
 It handles user management with Admin role support.
 """
 
-from flask import Flask
+from flask import Flask, request, g
 from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, get_jwt_identity
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
+import logging
+import json
+import time
+from datetime import datetime
 
 db = SQLAlchemy()
 jwt = JWTManager()
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+
+class StructuredLogger:
+    """Structured JSON logger for API requests and responses."""
+
+    def __init__(self, app=None):
+        self.logger = logging.getLogger('users_service')
+        self.logger.setLevel(logging.INFO)
+
+        # JSON formatter
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(message)s'))
+        self.logger.addHandler(handler)
+
+        if app:
+            self.init_app(app)
+
+    def init_app(self, app):
+        """Initialize logging middleware."""
+
+        @app.before_request
+        def before_request():
+            g.start_time = time.time()
+
+        @app.after_request
+        def after_request(response):
+            if request.path == '/favicon.ico':
+                return response
+
+            duration = time.time() - g.start_time
+
+            # Get user identity if authenticated
+            user_id = None
+            username = None
+            try:
+                identity = get_jwt_identity()
+                if identity:
+                    user_id = identity.get('id')
+                    username = identity.get('username')
+            except:
+                pass
+
+            log_data = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'service': 'users_service',
+                'method': request.method,
+                'path': request.path,
+                'status_code': response.status_code,
+                'duration_ms': round(duration * 1000, 2),
+                'ip': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent', ''),
+                'user_id': user_id,
+                'username': username
+            }
+
+            self.logger.info(json.dumps(log_data))
+            return response
+
+
+structured_logger = StructuredLogger()
 
 
 def create_app():
@@ -35,6 +106,8 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)
+    limiter.init_app(app)
+    structured_logger.init_app(app)
 
     with app.app_context():
         # Import models

@@ -4,12 +4,15 @@ Backend system for managing meeting rooms with Users and Rooms services, impleme
 
 ## Project Overview
 
-This is the first half of a complete Smart Meeting Room Management System. It implements:
+This is a complete Smart Meeting Room Management System. It implements:
 - **Users Service**: User authentication, authorization, and profile management
 - **Rooms Service**: Meeting room inventory management with equipment tracking
+- **Bookings Service**: Room reservation management with conflict detection
+- **Reviews Service**: Room reviews with ratings and moderation
 
-### Author
+### Authors
 - Abdel Rahman El Kouche - Users Service, Rooms Service, Admin role, Facility Manager role
+- Karim Abou Daher - Bookings Service, Reviews Service, Part II features integration
 
 ## Services Architecture
 
@@ -27,12 +30,29 @@ This is the first half of a complete Smart Meeting Room Management System. It im
 - Status management (available, booked, out_of_service)
 - Inter-service authentication with Users Service
 
+### Bookings Service (Port 5003)
+- Create and manage room reservations
+- Conflict detection for overlapping bookings
+- Availability checking
+- User booking history
+- Status management (confirmed, cancelled)
+- Role-based booking permissions
+
+### Reviews Service (Port 5004)
+- Create and manage room reviews
+- 5-star rating system
+- Comment sanitization with bleach
+- Review flagging and moderation
+- Filter by rating and flagged status
+- Moderator controls for content management
+
 ## Tech Stack
 - **Language**: Python 3.13
-- **Framework**: Flask 3.0
+- **Frameworks**: Flask 3.0 (Users, Rooms) & FastAPI 0.110 (Bookings, Reviews)
 - **Database**: PostgreSQL 15
-- **ORM**: SQLAlchemy 3.1
-- **Authentication**: Flask-JWT-Extended 4.6
+- **ORM**: SQLAlchemy 2.0 (sync & async)
+- **Authentication**: Flask-JWT-Extended 4.6 & python-jose 3.3
+- **Rate Limiting**: Flask-Limiter 3.5 & SlowAPI 0.1.9
 - **Containerization**: Docker & Docker Compose
 - **Testing**: Pytest 7.4 with coverage
 - **Documentation**: Sphinx 7.2 with Read the Docs theme
@@ -83,6 +103,8 @@ docker-compose up --build
 3. **Access the services**
 - Users Service: http://localhost:5001
 - Rooms Service: http://localhost:5002
+- Bookings Service: http://localhost:5003
+- Reviews Service: http://localhost:5004
 - PostgreSQL: localhost:5432
 
 ### Running Tests
@@ -97,9 +119,11 @@ pytest
 # Run specific service tests
 pytest tests/test_users_service.py
 pytest tests/test_rooms_service.py
+pytest tests/test_bookings_service.py
+pytest tests/test_reviews_service.py
 
 # Generate coverage report
-pytest --cov=users_service --cov=rooms_service --cov-report=html
+pytest --cov=users_service --cov=rooms_service --cov=bookings_service --cov=reviews_service --cov-report=html
 ```
 
 ### Building Documentation
@@ -157,6 +181,82 @@ python -m memory_profiler profiling/memory_profiler.py
 | `/api/rooms/<id>` | DELETE | Delete room | Admin/FM |
 | `/api/rooms/<id>/status` | PATCH | Update status | Admin/FM |
 
+#### Bookings Service
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/health` | GET | Health check | No |
+| `/bookings` | GET | Get all bookings | Admin/FM/Auditor |
+| `/bookings/<id>` | GET | Get booking by ID | Admin/FM/Auditor |
+| `/bookings/user/<username>` | GET | Get user bookings | Yes |
+| `/bookings` | POST | Create booking | Yes |
+| `/bookings/<id>` | PUT | Update booking | Owner/Admin/FM |
+| `/bookings/<id>` | DELETE | Cancel booking | Owner/Admin/FM |
+| `/bookings/check-availability` | GET | Check availability | Yes |
+
+#### Reviews Service
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/health` | GET | Health check | No |
+| `/reviews` | POST | Create review | Yes |
+| `/reviews/<id>` | PUT | Update review | Owner/Admin |
+| `/reviews/<id>` | DELETE | Delete review | Owner/Admin/Moderator |
+| `/reviews/room/<id>` | GET | Get room reviews | Yes |
+| `/reviews/<id>/flag` | POST | Flag review | Yes |
+| `/reviews/<id>/unflag` | POST | Unflag review | Moderator/Admin |
+
+## Part II Features (Implemented)
+
+### Rate Limiting
+All services implement rate limiting to prevent abuse:
+
+**Flask Services (Users, Rooms):**
+- Global limits: 200 requests/day, 50 requests/hour
+- Registration endpoint: 10 requests/hour
+- Login endpoint: 20 requests/hour
+- Room creation: 30 requests/hour
+- Implementation: Flask-Limiter with in-memory storage
+
+**FastAPI Services (Bookings, Reviews):**
+- Global limits: 200 requests/day, 50 requests/hour
+- Implementation: SlowAPI for async FastAPI support
+
+### Structured Logging
+All services log requests in structured JSON format for monitoring and analysis:
+
+**Logged Information:**
+- Timestamp (ISO 8601 format)
+- Service name
+- HTTP method and path
+- Status code
+- Request duration (milliseconds)
+- Client IP address
+- User agent
+- Authenticated user ID and username (if available)
+
+**Example Log Entry:**
+```json
+{
+  "timestamp": "2025-11-26T10:30:45.123456",
+  "service": "users_service",
+  "method": "POST",
+  "path": "/api/users/login",
+  "status_code": 200,
+  "duration_ms": 45.23,
+  "ip": "172.18.0.1",
+  "user_agent": "PostmanRuntime/7.32.3",
+  "user_id": 1,
+  "username": "admin"
+}
+```
+
+**Benefits:**
+- Easy integration with log aggregation tools (ELK, Splunk)
+- Performance monitoring and analysis
+- Security audit trails
+- Debugging and troubleshooting
+
 ## Security Features
 
 ### Input Validation & Sanitization
@@ -205,6 +305,9 @@ python -m memory_profiler profiling/memory_profiler.py
 ### Test Coverage
 - **Users Service**: 50+ test cases
 - **Rooms Service**: 40+ test cases
+- **Bookings Service**: 25+ test cases
+- **Reviews Service**: 25+ test cases
+- **Total**: 99+ test cases
 - **Code Coverage**: >85%
 
 ### Test Categories
@@ -219,31 +322,53 @@ python -m memory_profiler profiling/memory_profiler.py
 
 ```
 435LProject/
-├── users_service/
+├── users_service/             # Flask - Port 5001
 │   ├── domain/
 │   │   └── models.py          # User entity
 │   ├── application/
 │   │   ├── services.py        # Business logic
 │   │   ├── validators.py      # Input validation
 │   │   └── auth.py           # Authorization
-│   └── presentation/
-│       └── routes.py         # API endpoints
-├── rooms_service/
+│   ├── presentation/
+│   │   └── routes.py         # API endpoints
+│   ├── app.py                # App factory with rate limiting & logging
+│   └── Dockerfile
+├── rooms_service/             # Flask - Port 5002
 │   ├── domain/
 │   │   └── models.py          # Room entity
 │   ├── application/
 │   │   ├── services.py        # Business logic
 │   │   ├── validators.py      # Input validation
 │   │   └── auth.py           # Authorization
-│   └── presentation/
-│       └── routes.py         # API endpoints
+│   ├── presentation/
+│   │   └── routes.py         # API endpoints
+│   ├── app.py                # App factory with rate limiting & logging
+│   └── Dockerfile
+├── bookings_service/          # FastAPI - Port 5003
+│   ├── models.py             # Booking, User, Room entities
+│   ├── schemas.py            # Pydantic models
+│   ├── database.py           # Async SQLAlchemy setup
+│   ├── auth.py               # JWT authentication
+│   ├── routes.py             # API endpoints
+│   ├── main.py               # FastAPI app with rate limiting & logging
+│   └── Dockerfile
+├── reviews_service/           # FastAPI - Port 5004
+│   ├── models.py             # Review, User, Room entities
+│   ├── schemas.py            # Pydantic models
+│   ├── database.py           # Async SQLAlchemy setup
+│   ├── auth.py               # JWT authentication
+│   ├── routes.py             # API endpoints
+│   ├── main.py               # FastAPI app with rate limiting & logging
+│   └── Dockerfile
 ├── tests/
 │   ├── test_users_service.py
-│   └── test_rooms_service.py
+│   ├── test_rooms_service.py
+│   ├── test_bookings_service.py
+│   └── test_reviews_service.py
 ├── docs/                      # Sphinx documentation
 ├── profiling/                 # Performance scripts
-├── docker-compose.yml
-└── requirements.txt
+├── docker-compose.yml        # All 4 services + PostgreSQL
+└── requirements.txt          # All dependencies
 ```
 
 ## Development Workflow
@@ -297,17 +422,16 @@ cd C:\Users\user\PycharmProjects\435LProject
 python -m pytest tests/
 ```
 
-## Future Enhancements (Part II)
+## Future Enhancements
 
-Planned enhancements include:
-- Bookings Service
-- Reviews Service
-- Circuit breaker pattern
-- Rate limiting
-- Caching with Redis
-- Real-time dashboards
+Additional features that could be implemented:
+- Circuit breaker pattern for service resilience
+- Caching with Redis for improved performance
+- Real-time dashboards with WebSockets
 - Multi-factor authentication
-- Prometheus monitoring
+- Prometheus monitoring and metrics
+- API versioning
+- GraphQL support
 
 ## License
 

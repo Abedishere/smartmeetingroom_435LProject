@@ -57,6 +57,52 @@ services:
       - meetingroom_network
     restart: unless-stopped
 
+  bookings_service:
+    build:
+      context: .
+      dockerfile: bookings_service/Dockerfile
+    container_name: bookings_service
+    environment:
+      DATABASE_URL: postgresql://admin:admin123@db:5432/meetingroom
+      JWT_SECRET_KEY: your-secret-key-change-in-production
+      USERS_SERVICE_URL: http://users_service:5001
+      ROOMS_SERVICE_URL: http://rooms_service:5002
+    ports:
+      - "5003:5003"
+    depends_on:
+      db:
+        condition: service_healthy
+      users_service:
+        condition: service_started
+      rooms_service:
+        condition: service_started
+    networks:
+      - meetingroom_network
+    restart: unless-stopped
+
+  reviews_service:
+    build:
+      context: .
+      dockerfile: reviews_service/Dockerfile
+    container_name: reviews_service
+    environment:
+      DATABASE_URL: postgresql://admin:admin123@db:5432/meetingroom
+      JWT_SECRET_KEY: your-secret-key-change-in-production
+      USERS_SERVICE_URL: http://users_service:5001
+      ROOMS_SERVICE_URL: http://rooms_service:5002
+    ports:
+      - "5004:5004"
+    depends_on:
+      db:
+        condition: service_healthy
+      users_service:
+        condition: service_started
+      rooms_service:
+        condition: service_started
+    networks:
+      - meetingroom_network
+    restart: unless-stopped
+
 networks:
   meetingroom_network:
     driver: bridge
