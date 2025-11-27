@@ -20,15 +20,22 @@ from users_service.application.validators import ValidationError
 @pytest.fixture
 def app():
     """Create and configure a test application instance."""
+    # Set DATABASE_URL and TESTING env vars before create_app() is called
+    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+    os.environ['TESTING'] = 'True'
+
     app = create_app()
     app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 
     with app.app_context():
-        db.create_all()
         yield app
         db.session.remove()
         db.drop_all()
+
+    # Clean up env vars
+    for key in ['DATABASE_URL', 'TESTING']:
+        if key in os.environ:
+            del os.environ[key]
 
 
 @pytest.fixture

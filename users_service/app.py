@@ -102,11 +102,16 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600  # 1 hour
+    app.config['TESTING'] = os.getenv('TESTING', 'False') == 'True'
 
     # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)
-    limiter.init_app(app)
+
+    # Disable rate limiting in test mode
+    if not app.config.get('TESTING', False):
+        limiter.init_app(app)
+
     structured_logger.init_app(app)
 
     with app.app_context():
