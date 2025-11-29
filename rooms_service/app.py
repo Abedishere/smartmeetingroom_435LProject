@@ -14,6 +14,7 @@ import os
 import logging
 import json
 import time
+import sys
 from datetime import datetime
 
 db = SQLAlchemy()
@@ -23,6 +24,9 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://"
 )
+
+# Ensure module is consistently reachable for imports even during initialization
+sys.modules.setdefault("rooms_service.app", sys.modules[__name__])
 
 
 class StructuredLogger:
@@ -128,6 +132,7 @@ def create_app():
     return app
 
 
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     app.run(host='0.0.0.0', port=5002, debug=True)

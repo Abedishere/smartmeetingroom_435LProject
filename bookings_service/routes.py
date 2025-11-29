@@ -217,12 +217,12 @@ async def update_booking(
     return booking
 
 
-@router.delete("/{booking_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+@router.delete("/{booking_id}", status_code=status.HTTP_200_OK)
 async def cancel_booking(
     booking_id: int,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
-) -> Response:
+) -> dict[str, str]:
     """Cancel a booking."""
     ensure_not_readonly(current_user)
 
@@ -235,4 +235,4 @@ async def cancel_booking(
 
     booking.status = "cancelled"
     await session.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return {"message": f"Booking {booking_id} cancelled successfully"}

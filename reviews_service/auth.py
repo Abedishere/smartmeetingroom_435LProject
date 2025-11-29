@@ -68,9 +68,9 @@ async def get_current_user(
     try:
         payload = jwt.decode(token, _jwt_secret(), algorithms=[_jwt_algorithm()])
         user_id = payload.get("sub")
-        role = payload.get("role")
-        username = payload.get("username")
-        if user_id is None or role is None:
+        role = payload.get("role") or "regular_user"
+        username = payload.get("username") or "unknown"
+        if user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
     except JWTError as exc:  # pragma: no cover - jose provides coverage
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc

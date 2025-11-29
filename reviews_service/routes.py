@@ -91,12 +91,12 @@ async def update_review(
     return review
 
 
-@router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+@router.delete("/{review_id}", status_code=status.HTTP_200_OK)
 async def delete_review(
     review_id: int,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
-) -> Response:
+) -> dict[str, str]:
     """Delete a review (owner, moderator, admin)."""
     ensure_not_readonly(current_user)
     review = await _get_review(session, review_id)
@@ -108,7 +108,7 @@ async def delete_review(
 
     await session.delete(review)
     await session.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return {"message": f"Review {review_id} deleted successfully"}
 
 
 @router.get("/room/{room_id}", response_model=list[schemas.ReviewOut])
