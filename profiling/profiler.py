@@ -31,7 +31,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from users_service.app import create_app
-from users_service.application.services import UserService
+from upush sers_service.application.services import UserService
 
 
 def profile_user_service_functions():
