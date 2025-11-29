@@ -1,6 +1,5 @@
 # Smart Meeting Room Management System - Project Contributions Report
 
-**Course**: Software Tools Lab - Fall 2025-2026
 **Project**: Smart Meeting Room Management System
 **Report Date**: November 27, 2025
 
@@ -191,7 +190,7 @@ This report provides a comprehensive breakdown of contributions to the Smart Mee
   - Concurrent request testing
   - Response time statistics
 
-- `profiling/memory_profiler.py` (67 lines):
+- `profiling/profile_memory.py` (67 lines):
   - Memory usage tracking
   - Memory leak detection
   - Service resource consumption analysis

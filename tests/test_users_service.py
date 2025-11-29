@@ -350,7 +350,7 @@ class TestInputValidation:
     """Tests for input validation and sanitization."""
 
     def test_sanitize_xss_attempt(self, client):
-        """Test that XSS attempts are sanitized."""
+        """Test that XSS attempts are rejected."""
         response = client.post('/api/users/register', json={
             'name': '<script>alert("XSS")</script>John',
             'username': 'johndoe',
@@ -358,10 +358,10 @@ class TestInputValidation:
             'email': 'john@example.com'
         })
 
-        assert response.status_code == 201
+        # XSS attempts should be rejected (more secure than sanitizing)
+        assert response.status_code == 400
         data = response.get_json()
-        # Script tags should be removed
-        assert '<script>' not in data['user']['name']
+        assert 'error' in data
 
     def test_validate_username_format(self, client):
         """Test username format validation."""

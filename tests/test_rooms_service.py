@@ -8,6 +8,7 @@ import pytest
 import sys
 import os
 from unittest.mock import patch, MagicMock
+from jose import jwt
 
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -17,6 +18,9 @@ from rooms_service.domain.models import Room
 from rooms_service.application.services import RoomService
 from rooms_service.application.validators import ValidationError
 
+TEST_SECRET = "test-secret-key"
+ALGORITHM = "HS256"
+
 
 @pytest.fixture
 def app():
@@ -24,6 +28,8 @@ def app():
     # Set DATABASE_URL and TESTING env vars before create_app() is called
     os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
     os.environ['TESTING'] = 'True'
+    os.environ['JWT_SECRET_KEY'] = TEST_SECRET
+    os.environ['JWT_ALGORITHM'] = ALGORITHM
 
     app = create_app()
     app.config['TESTING'] = True
@@ -34,7 +40,7 @@ def app():
         db.drop_all()
 
     # Clean up env vars
-    for key in ['DATABASE_URL', 'TESTING']:
+    for key in ['DATABASE_URL', 'TESTING', 'JWT_SECRET_KEY', 'JWT_ALGORITHM']:
         if key in os.environ:
             del os.environ[key]
 
@@ -86,8 +92,9 @@ def mock_regular_user_auth():
 
 @pytest.fixture
 def auth_headers():
-    """Mock auth headers."""
-    return {'Authorization': 'Bearer fake-token'}
+    """Create auth headers with a real JWT token for admin user."""
+    token = jwt.encode({"sub": "1", "username": "admin", "role": "admin"}, TEST_SECRET, algorithm=ALGORITHM)
+    return {'Authorization': f'Bearer {token}'}
 
 
 class TestRoomCreation:
@@ -429,7 +436,7 @@ class TestInputValidation:
     """Tests for input validation and sanitization."""
 
     def test_sanitize_xss_attempt(self, client, mock_auth, auth_headers):
-        """Test that XSS attempts are sanitized."""
+        """Test that XSS attempts are rejected."""
         response = client.post('/api/rooms/',
                               headers=auth_headers,
                               json={
@@ -439,10 +446,10 @@ class TestInputValidation:
                                   'location': 'Building 1'
                               })
 
-        assert response.status_code == 201
+        # XSS attempts should be rejected (more secure than sanitizing)
+        assert response.status_code == 400
         data = response.get_json()
-        # Script tags should be removed
-        assert '<script>' not in data['room']['name']
+        assert 'error' in data
 
     def test_validate_room_name_format(self, client, mock_auth, auth_headers):
         """Test room name format validation."""

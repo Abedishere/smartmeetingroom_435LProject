@@ -74,6 +74,26 @@ async def list_bookings(session: AsyncSession = Depends(get_session)) -> list[sc
     return list(result.scalars())
 
 
+@router.get("/check-availability", response_model=schemas.AvailabilityResponse)
+async def check_availability(
+    room_id: int = Query(..., description="Room identifier"),
+    start_time: datetime = Query(..., description="Proposed start time"),
+    end_time: datetime = Query(..., description="Proposed end time"),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> schemas.AvailabilityResponse:
+    """Check if a room is available for the given time window."""
+    if end_time <= start_time:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="end_time must be after start_time")
+
+    room = await _get_room(session, room_id)
+    if not room:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
+
+    available = not await _has_conflict(session, room_id, start_time, end_time)
+    return schemas.AvailabilityResponse(available=available)
+
+
 @router.get(
     "/{booking_id}",
     response_model=schemas.BookingOut,
@@ -216,23 +236,3 @@ async def cancel_booking(
     booking.status = "cancelled"
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.get("/check-availability", response_model=schemas.AvailabilityResponse)
-async def check_availability(
-    room_id: int = Query(..., description="Room identifier"),
-    start_time: datetime = Query(..., description="Proposed start time"),
-    end_time: datetime = Query(..., description="Proposed end time"),
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-) -> schemas.AvailabilityResponse:
-    """Check if a room is available for the given time window."""
-    if end_time <= start_time:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="end_time must be after start_time")
-
-    room = await _get_room(session, room_id)
-    if not room:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
-
-    available = not await _has_conflict(session, room_id, start_time, end_time)
-    return schemas.AvailabilityResponse(available=available)

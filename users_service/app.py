@@ -97,7 +97,7 @@ def create_app():
     # Configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
         'DATABASE_URL',
-        'postgresql://admin:admin123@db:5432/meetingroom'
+        'sqlite:///users.db'
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')

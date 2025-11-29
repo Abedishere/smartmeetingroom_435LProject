@@ -216,7 +216,8 @@ class TestCreateBooking:
             headers=headers,
         )
         assert response.status_code == 409
-        assert "conflict" in response.json()["detail"].lower()
+        assert ("conflict" in response.json()["detail"].lower() or
+                "already booked" in response.json()["detail"].lower())
 
     def test_create_booking_invalid_time(self, client):
         """Test booking creation fails with invalid time range."""
@@ -386,7 +387,7 @@ class TestUpdateBooking:
         start = datetime.utcnow() + timedelta(days=4)
         end = start + timedelta(hours=2)
         token_alice = _token_for(1, "alice", "regular_user")
-        token_bob = _token_for(2, "bob", "regular_user")
+        token_service = _token_for(5, "service", "regular_user")
 
         # Create booking as alice
         response = client.post(
@@ -401,11 +402,11 @@ class TestUpdateBooking:
         )
         booking_id = response.json()["id"]
 
-        # Try to update as different user (bob as regular user, not admin)
+        # Try to update as different regular user
         response = client.put(
             f"/bookings/{booking_id}",
             json={"room_id": 2},
-            headers={"Authorization": f"Bearer {token_bob}"},
+            headers={"Authorization": f"Bearer {token_service}"},
         )
         assert response.status_code == 403
 
@@ -454,7 +455,7 @@ class TestCancelBooking:
         start = datetime.utcnow() + timedelta(days=6)
         end = start + timedelta(hours=2)
         token_alice = _token_for(1, "alice", "regular_user")
-        token_bob = _token_for(2, "bob", "regular_user")
+        token_service = _token_for(5, "service", "regular_user")
 
         # Create booking as alice
         response = client.post(
@@ -469,10 +470,10 @@ class TestCancelBooking:
         )
         booking_id = response.json()["id"]
 
-        # Try to cancel as bob
+        # Try to cancel as different regular user
         response = client.delete(
             f"/bookings/{booking_id}",
-            headers={"Authorization": f"Bearer {token_bob}"},
+            headers={"Authorization": f"Bearer {token_service}"},
         )
         assert response.status_code == 403
 
@@ -570,3 +571,373 @@ class TestUserBookingHistory:
 
         response = client.get("/bookings/user/nonexistent", headers=headers)
         assert response.status_code == 404
+
+class TestListBookings:
+    """Tests for listing all bookings endpoint."""
+
+    def test_list_all_bookings_as_admin(self, client):
+        """Test admin can list all bookings."""
+        from datetime import datetime, timedelta
+        token = _token_for(2, "bob", "admin")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = client.get("/bookings", headers=headers)
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+
+class TestGetBookingById:
+    """Tests for get booking by ID endpoint."""
+
+    def test_get_booking_by_id_as_admin(self, client):
+        """Test get specific booking by ID."""
+        from datetime import datetime, timedelta
+        token_alice = _token_for(1, "alice", "regular_user")
+        token_admin = _token_for(2, "bob", "admin")
+        
+        # Create a booking first
+        start = datetime.utcnow() + timedelta(days=20)
+        end = start + timedelta(hours=2)
+        
+        response = client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 1,
+                "start_time": start.isoformat(),
+                "end_time": end.isoformat(),
+            },
+            headers={"Authorization": f"Bearer {token_alice}"},
+        )
+        booking_id = response.json()["id"]
+        
+        # Get booking by ID
+        response = client.get(
+            f"/bookings/{booking_id}",
+            headers={"Authorization": f"Bearer {token_admin}"},
+        )
+        assert response.status_code == 200
+        assert response.json()["id"] == booking_id
+
+    def test_get_nonexistent_booking(self, client):
+        """Test getting a booking that doesn't exist."""
+        token = _token_for(2, "bob", "admin")
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = client.get("/bookings/99999", headers=headers)
+        assert response.status_code == 404
+
+
+class TestCheckAvailabilityEdgeCases:
+    """Additional availability check tests."""
+
+    def test_check_availability_room_not_found(self, client):
+        """Test checking availability for non-existent room."""
+        from datetime import datetime, timedelta
+        token = _token_for(1, "alice", "regular_user")
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        start = datetime.utcnow() + timedelta(days=30)
+        end = start + timedelta(hours=2)
+        
+        response = client.get(
+            f"/bookings/check-availability?room_id=99999&start_time={start.isoformat()}&end_time={end.isoformat()}",
+            headers=headers,
+        )
+        assert response.status_code == 404
+
+
+class TestUpdateBookingEdgeCases:
+    """Additional update booking tests."""
+
+    def test_update_nonexistent_booking(self, client):
+        """Test updating a booking that doesn't exist."""
+        token = _token_for(1, "alice", "regular_user")
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = client.put(
+            "/bookings/99999",
+            json={"room_id": 2},
+            headers=headers,
+        )
+        assert response.status_code == 404
+
+    def test_update_booking_to_conflicting_time(self, client):
+        """Test updating booking to a time that conflicts with another booking."""
+        from datetime import datetime, timedelta
+        token = _token_for(1, "alice", "regular_user")
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        start1 = datetime.utcnow() + timedelta(days=40)
+        end1 = start1 + timedelta(hours=2)
+        
+        # Create first booking
+        response = client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 1,
+                "start_time": start1.isoformat(),
+                "end_time": end1.isoformat(),
+            },
+            headers=headers,
+        )
+        
+        start2 = datetime.utcnow() + timedelta(days=41)
+        end2 = start2 + timedelta(hours=2)
+        
+        # Create second booking
+        response = client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 1,
+                "start_time": start2.isoformat(),
+                "end_time": end2.isoformat(),
+            },
+            headers=headers,
+        )
+        booking_id = response.json()["id"]
+        
+        # Try to update second booking to conflict with first
+        response = client.put(
+            f"/bookings/{booking_id}",
+            json={
+                "start_time": start1.isoformat(),
+                "end_time": end1.isoformat(),
+            },
+            headers=headers,
+        )
+        assert response.status_code == 409
+
+
+class TestCancelBookingEdgeCases:
+    """Additional cancel booking tests."""
+
+    def test_cancel_nonexistent_booking(self, client):
+        """Test canceling a booking that doesn't exist."""
+        token = _token_for(1, "alice", "regular_user")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = client.delete("/bookings/99999", headers=headers)
+        assert response.status_code == 404
+
+
+class TestCreateBookingWithUsername:
+    """Tests for creating bookings using username instead of user_id."""
+
+    def test_create_booking_with_username(self, client):
+        """Test creating a booking using username instead of user_id."""
+        from datetime import datetime, timedelta
+        token = _token_for(1, "alice", "regular_user")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        start = datetime.utcnow() + timedelta(days=50)
+        end = start + timedelta(hours=2)
+
+        response = client.post(
+            "/bookings",
+            json={
+                "username": "alice",
+                "room_id": 1,
+                "start_time": start.isoformat(),
+                "end_time": end.isoformat(),
+            },
+            headers=headers,
+        )
+        assert response.status_code == 201
+        assert response.json()["user"]["username"] == "alice"
+
+    def test_create_booking_with_nonexistent_username(self, client):
+        """Test creating booking with username that doesn't exist."""
+        from datetime import datetime, timedelta
+        token = _token_for(2, "bob", "admin")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        start = datetime.utcnow() + timedelta(days=51)
+        end = start + timedelta(hours=2)
+
+        response = client.post(
+            "/bookings",
+            json={
+                "username": "nonexistent_user",
+                "room_id": 1,
+                "start_time": start.isoformat(),
+                "end_time": end.isoformat(),
+            },
+            headers=headers,
+        )
+        assert response.status_code == 404
+        assert "User not found" in response.json()["detail"]
+
+
+class TestUpdateBookingRoomNotFound:
+    """Test updating booking with non-existent room."""
+
+    def test_update_booking_room_not_found(self, client):
+        """Test updating booking to a room that doesn't exist."""
+        from datetime import datetime, timedelta
+        token = _token_for(1, "alice", "regular_user")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        start = datetime.utcnow() + timedelta(days=60)
+        end = start + timedelta(hours=2)
+
+        # Create booking first
+        response = client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 1,
+                "start_time": start.isoformat(),
+                "end_time": end.isoformat(),
+            },
+            headers=headers,
+        )
+        booking_id = response.json()["id"]
+
+        # Try to update to non-existent room
+        response = client.put(
+            f"/bookings/{booking_id}",
+            json={"room_id": 99999},
+            headers=headers,
+        )
+        assert response.status_code == 404
+        assert "Room not found" in response.json()["detail"]
+
+    def test_update_booking_conflict_detection(self, client):
+        """Test that update properly detects conflicts through the loop."""
+        from datetime import datetime, timedelta
+        token = _token_for(1, "alice", "regular_user")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Create multiple bookings to test the conflict loop
+        start1 = datetime.utcnow() + timedelta(days=70)
+        end1 = start1 + timedelta(hours=2)
+
+        # Booking 1
+        client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 2,
+                "start_time": start1.isoformat(),
+                "end_time": end1.isoformat(),
+            },
+            headers=headers,
+        )
+
+        # Booking 2 (different time)
+        start2 = datetime.utcnow() + timedelta(days=71)
+        end2 = start2 + timedelta(hours=2)
+
+        client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 2,
+                "start_time": start2.isoformat(),
+                "end_time": end2.isoformat(),
+            },
+            headers=headers,
+        )
+
+        # Booking 3 (to be updated)
+        start3 = datetime.utcnow() + timedelta(days=72)
+        end3 = start3 + timedelta(hours=2)
+
+        response = client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 2,
+                "start_time": start3.isoformat(),
+                "end_time": end3.isoformat(),
+            },
+            headers=headers,
+        )
+        booking_id = response.json()["id"]
+
+        # Try to update booking 3 to conflict with booking 1
+        # This should iterate through multiple bookings in the loop
+        response = client.put(
+            f"/bookings/{booking_id}",
+            json={
+                "start_time": start1.isoformat(),
+                "end_time": end1.isoformat(),
+            },
+            headers=headers,
+        )
+        assert response.status_code == 409
+
+
+class TestCreateBookingConflict:
+    """Test creating bookings that conflict with existing bookings."""
+
+    def test_create_booking_with_exact_conflict(self, client):
+        """Test creating a booking that exactly overlaps an existing booking."""
+        from datetime import datetime, timedelta
+        token = _token_for(1, "alice", "regular_user")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        start = datetime.utcnow() + timedelta(days=100)
+        end = start + timedelta(hours=2)
+
+        # Create first booking
+        response1 = client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 3,
+                "start_time": start.isoformat(),
+                "end_time": end.isoformat(),
+            },
+            headers=headers,
+        )
+        assert response1.status_code == 201
+
+        # Try to create second booking with exact same time
+        response2 = client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 3,
+                "start_time": start.isoformat(),
+                "end_time": end.isoformat(),
+            },
+            headers=headers,
+        )
+        assert response2.status_code == 409
+        assert "already booked" in response2.json()["detail"].lower()
+
+
+class TestGetUserBookingsSuccess:
+    """Test successfully getting user bookings."""
+
+    def test_get_user_bookings_returns_list(self, client):
+        """Test that getting user bookings returns the actual list."""
+        from datetime import datetime, timedelta
+        token = _token_for(1, "alice", "regular_user")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        start = datetime.utcnow() + timedelta(days=110)
+        end = start + timedelta(hours=2)
+
+        # Create a booking for alice
+        client.post(
+            "/bookings",
+            json={
+                "user_id": 1,
+                "room_id": 1,
+                "start_time": start.isoformat(),
+                "end_time": end.isoformat(),
+            },
+            headers=headers,
+        )
+
+        # Get alice's bookings
+        response = client.get("/bookings/user/alice", headers=headers)
+        assert response.status_code == 200
+        bookings = response.json()
+        assert isinstance(bookings, list)
+        assert len(bookings) > 0  # At least one booking

@@ -66,7 +66,7 @@ def app(async_engine, async_session_factory, setup_env):
                     User(id=2, username="bob", role="admin"),
                     User(id=3, username="moderator", role="moderator"),
                     User(id=4, username="dave", role="auditor_readonly"),
-                    User(id=5, username="charlie", role="facility_manager"),
+                    User(id=5, username="charlie", role="regular_user"),
                 ]
             )
             session.add_all([Room(id=1, name="Conf A"), Room(id=2, name="Conf B")])

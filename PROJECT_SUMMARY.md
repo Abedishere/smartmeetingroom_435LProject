@@ -360,7 +360,7 @@ Measures:
 - Database queries optimized with indexes
 
 ### 2. Memory Profiling
-**File:** `profiling/memory_profiler.py`
+**File:** `profiling/profile_memory.py`
 
 Tracks:
 - Memory allocation
@@ -518,7 +518,7 @@ git commit -m "Detailed message"
 │
 ├── profiling/
 │   ├── performance_profiler.py  # Performance profiling
-│   └── memory_profiler.py       # Memory profiling
+│   └── profile_memory.py        # Memory profiling
 │
 ├── docker-compose.yml         # Multi-container setup
 ├── requirements.txt           # Python dependencies
