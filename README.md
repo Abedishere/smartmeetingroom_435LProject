@@ -474,10 +474,3 @@ Additional features that could be implemented:
 - API versioning
 - GraphQL support
 
-## License
-
-This is a academic project for Software Tools Lab - Fall 2025-2026.
-
-## Contact
-
-For questions or issues, please contact the project maintainer.
