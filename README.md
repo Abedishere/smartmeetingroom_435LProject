@@ -8,9 +8,6 @@ This is the first half of a complete Smart Meeting Room Management System. It im
 - **Users Service**: User authentication, authorization, and profile management
 - **Rooms Service**: Meeting room inventory management with equipment tracking
 
-### Author
-- Abdel Rahman El Kouche - Users Service, Rooms Service, Admin role, Facility Manager role
-
 ## Services Architecture
 
 ### Users Service (Port 5001)
