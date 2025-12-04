@@ -11,8 +11,8 @@ This is a complete Smart Meeting Room Management System. It implements:
 - **Reviews Service**: Room reviews with ratings and moderation
 
 ### Authors
-- Abdel Rahman El Kouche - Users Service, Rooms Service, Admin role, Facility Manager role
-- Karim Abou Daher - Bookings Service, Reviews Service, Part II features integration
+- Abdel Rahman El Kouche - Users Service, Rooms Service, Admin role, Part II features integration
+- Karim Abou Daher - Bookings Service, Reviews Service, Facility Manager role
 
 ## Services Architecture
 
