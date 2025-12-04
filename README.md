@@ -92,7 +92,7 @@ This is a complete Smart Meeting Room Management System. It implements:
 
 1. **Clone the repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/Abedishere/smartmeetingroom_435LProject
 cd 435LProject
 ```
 
